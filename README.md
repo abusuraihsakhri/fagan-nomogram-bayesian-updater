@@ -1,7 +1,7 @@
 # Fagan Nomogram Bayesian Updater
 
 > **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
+> **Standards:** CAP / CLSI / ISO / NIST
 
 <div align="center">
 
@@ -16,101 +16,166 @@
 
 ---
 
-## 📖 What It Does
+## What It Does
 
-Fagan Nomogram & Bayesian Diagnostic Probability Updater
-Calculates Positive/Negative Likelihood Ratios (LR+, LR-) and updates pre-test to post-test disease probability.
+Fagan Nomogram & Bayesian Diagnostic Probability Updater calculates composite scores from clinical measurements and classifies them into risk tiers. Includes an enterprise multi-agent evaluation platform with HMAC-SHA256 audit trails and zero-PHI outbound protection.
 
-Zero-dependency Python implementation with single and batch evaluation.
-Author: Dr. Abu Suraih Sakhri
-License: MIT
+Author: Dr. Abu Suraih Sakhri · License: MIT
 
 ---
 
-## ⚙️ Key Capabilities & Algorithmic Modules
-
-### 🔬 Analytical Functions
-
-- **`calculate_metrics()`**: Core domain algorithm for fagan-nomogram-bayesian-updater.
-- **`process_single()`** — calculates and validates process_single parameters.
-- **`process_batch()`** — calculates and validates process_batch parameters.
-- **`main()`** — calculates and validates main parameters.
-
----
-
-## 📐 Mathematical Formulation & Logic
-
-```text
-  score = primary_val
-  rounded_score = round(score, 2)
-  res = calculate_metrics(**kwargs)
-  calc_res = calculate_metrics(**r)
-```
-
----
-
-## 💻 CLI Quickstart & Usage
-
-### 1. Guided Interactive Mode
-```bash
-python cli.py
-```
-
-### 2. Direct Parameterized Evaluation
-```bash
-python cli.py --task-id <value> --target <value> --primary <value> --secondary <value>
-```
-
-### Parameter Reference
-- `--task-id`: Specifies input measurement or parameter value.
-- `--target`: Specifies input measurement or parameter value.
-- `--primary`: Specifies input measurement or parameter value.
-- `--secondary`: Specifies input measurement or parameter value.
-- `--critical`: Specifies input measurement or parameter value.
-- `--status`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
-
-### Input Data Schema
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `Patient_ID` | Parameter / observation metric | Required |
-| `v1` | Parameter / observation metric | Required |
-| `v2` | Parameter / observation metric | Required |
-| `v3` | Parameter / observation metric | Required |
-
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
----
-
-## 🧪 Testing & Verification
-
-Run the automated test suite:
+## Installation
 
 ```bash
-pytest -v
-```
+# Core (zero-dependency)
+pip install -e .
 
-Execute high-throughput batch simulation benchmarks:
+# With web API support
+pip install -e ".[web]"
 
-```bash
-python simulator.py --tasks 1000 --concurrency 8
+# With test dependencies
+pip install -e ".[test]"
+
+# Everything
+pip install -e ".[all]"
 ```
 
 ---
 
-## 🐳 Container Deployment
+## Usage
+
+### 1. Single Evaluation (CLI)
+
+```bash
+python fagan_nomogram.py single --v1 14.5 --v2 4.2 --v3 1.8
+```
+
+### 2. Batch CSV Processing
+
+```bash
+python fagan_nomogram.py batch -i sample.csv -o results.csv
+```
+
+### 3. Enterprise Supervisor (Multi-Agent Evaluation)
+
+```bash
+# Run a single audit task
+python cli.py audit --task-id TASK-001 --primary 28.5 --secondary 14.2
+
+# Batch process via supervisor
+python cli.py batch -i sample.csv -o dossier_results.csv
+
+# Verify HMAC audit trail integrity
+python cli.py verify-audit
+
+# Query supervisory chat
+python cli.py chat "Explain current calibration status"
+```
+
+### 4. REST API Server
+
+```bash
+python cli.py serve --host 127.0.0.1 --port 8000
+```
+
+Or with Docker:
 
 ```bash
 docker build -t fagan-nomogram-bayesian-updater .
-docker run -p 8000:8000 fagan-nomogram-bayesian-updater
+docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secret fagan-nomogram-bayesian-updater
+```
+
+### 5. High-Throughput Simulation
+
+```bash
+python simulator.py 1000
+```
+
+---
+
+## Mathematical Formulation
+
+The core `calculate_metrics()` function computes a weighted score:
+
+```
+score = v1 + v2/2 + v3/3 + ...
+```
+
+Classification tiers:
+- **Low / Standard** (score < 10): Standard monitoring
+- **Moderate / Intermediate** (10 ≤ score < 25): Close observation
+- **High / Severe** (score ≥ 25): Urgent clinical intervention
+
+---
+
+## Security Architecture
+
+* **Zero-PHI Outbound Interceptor:** AST and regex inspection blocking SSNs, MRNs, phone numbers, emails, DOBs, and patient names.
+* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation. Integrity verification recomputes every signature.
+* **Secure Secret Management:** No hardcoded secrets in production. `AUDIT_SECRET_KEY` must be provided via environment variable.
+* **Path Traversal Protection:** All file I/O resolves and validates paths against directory traversal.
+
+**Important:** Set `AUDIT_SECRET_KEY` in production. Without it, an ephemeral runtime key is generated (and a warning emitted), which means audit trails won't persist across restarts.
+
+---
+
+## Testing
+
+```bash
+# Run full test suite
+pytest -v
+
+# Run with coverage (if pytest-cov installed)
+pytest -v --cov=.
+```
+
+The test suite covers:
+- Core scoring and classification logic
+- Batch CSV processing (including edge cases)
+- PHI guard enforcement (MRN, SSN, phone, email patterns)
+- Worker agent evaluation
+- Supervisor consensus and audit trail
+- HMAC integrity verification
+- CLI commands (audit, chat, verify-audit)
+- Enrichment module suite
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Service health check |
+| GET | `/metrics` | Operational metrics (dossier count, audit blocks) |
+| POST | `/api/audit` | Dispatch task across evaluation workers |
+| POST | `/api/chat` | Supervisory conversational assistant |
+| GET | `/api/audit/logs` | Retrieve and verify HMAC audit trail |
+
+---
+
+## Project Structure
+
+```
+fagan-nomogram-bayesian-updater/
+├── fagan_nomogram.py     # Core scoring algorithm (zero-dependency)
+├── cli.py                # Enterprise CLI (supervisor, batch, serve)
+├── simulator.py          # High-throughput simulation
+├── enrichment.py         # Enrichment engine suite
+├── agents/
+│   ├── __init__.py       # Package metadata
+│   ├── api.py            # FastAPI REST server
+│   ├── base.py           # Security guards, audit trail, PHI protection
+│   ├── models.py         # Pydantic data models
+│   ├── supervisor.py     # Multi-agent orchestrator
+│   ├── workers.py        # Specialized evaluation workers
+│   ├── llm_factory.py    # LLM provider abstraction
+│   ├── learning.py       # Bayesian calibration engine
+│   ├── metrics.py        # Prometheus metrics collector
+│   └── streamer.py       # WebSocket telemetry broadcaster
+├── tests/                # Pytest test suite
+├── web/index.html        # Operations console (static)
+├── pyproject.toml        # Package configuration
+├── Dockerfile            # Container build
+├── docker-compose.yml    # Production deployment
+└── openapi_spec.json     # OpenAPI 3.1 specification
 ```

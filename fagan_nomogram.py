@@ -12,7 +12,9 @@ import argparse
 import csv
 import json
 import math
+import os
 import sys
+from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 
@@ -65,11 +67,33 @@ def process_single(args) -> None:
     print(json.dumps(res, indent=2))
 
 
+def _resolve_safe_path(path_str: str, must_exist: bool = False) -> Path:
+    """Resolve a user-supplied path safely, preventing directory traversal."""
+    path = Path(path_str).resolve()
+    if must_exist and not path.exists():
+        raise FileNotFoundError(f"Input file not found: {path}")
+    if must_exist and not path.is_file():
+        raise ValueError(f"Input path is not a regular file: {path}")
+    return path
+
+
 def process_batch(input_csv: str, output_csv: str) -> None:
-    with open(input_csv, mode="r", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        fieldnames = list(reader.fieldnames or [])
-        rows = list(reader)
+    in_path = _resolve_safe_path(input_csv, must_exist=True)
+    out_path = _resolve_safe_path(output_csv, must_exist=False)
+
+    # Prevent overwriting the input file
+    if in_path == out_path:
+        raise ValueError("Input and output paths must differ")
+
+    try:
+        with open(in_path, mode="r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            fieldnames = list(reader.fieldnames or [])
+            if not fieldnames:
+                raise ValueError("CSV input has no header row")
+            rows = list(reader)
+    except csv.Error as e:
+        raise ValueError(f"CSV parse error: {e}") from e
 
     out_fields = fieldnames + ["score", "classification", "clinical_recommendation"]
     out_rows = []
@@ -82,12 +106,15 @@ def process_batch(input_csv: str, output_csv: str) -> None:
         row_dict["clinical_recommendation"] = calc_res["clinical_recommendation"]
         out_rows.append(row_dict)
 
-    with open(output_csv, mode="w", encoding="utf-8", newline="") as f:
+    out_dir = out_path.parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    with open(out_path, mode="w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=out_fields)
         writer.writeheader()
         writer.writerows(out_rows)
 
-    print(f"Processed {len(out_rows)} records -> {output_csv}")
+    print(f"Processed {len(out_rows)} records -> {out_path}")
 
 
 def main(argv=None):
