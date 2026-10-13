@@ -29,3 +29,19 @@ jobs:
           path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify public application
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if curl --silent --show-error --fail --location --max-time 20 "$PAGE_URL" -o /tmp/fagan-live.html \
+              && grep -Fq '<title>Fagan Nomogram | Bayesian Diagnostic Updater</title>' /tmp/fagan-live.html \
+              && grep -Fq 'id="nomogram"' /tmp/fagan-live.html \
+              && grep -Fq 'id="pretest"' /tmp/fagan-live.html; then
+              echo "Live calculator HTML verified at $PAGE_URL"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Live calculator smoke test failed" >&2
+          exit 1
