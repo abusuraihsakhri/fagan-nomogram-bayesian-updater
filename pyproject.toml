@@ -1,18 +1,16 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "fagan-nomogram-bayesian-updater"
-version = "3.0.0"
-description = "Fagan Nomogram & Bayesian Diagnostic Probability Updater — clinical decision support with zero-dependency core and optional FastAPI/Prometheus telemetry."
+version = "3.1.0"
+description = "Fagan nomogram and Bayesian post-test probability calculator with CLI, CSV, browser UI and optional API."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
-authors = [
-    { name = "Dr. Abu Suraih Sakhri" },
-]
-keywords = ["fagan-nomogram", "bayesian", "diagnostic", "clinical", "likelihood-ratios"]
+authors = [{ name = "Dr. Abu Suraih Sakhri" }]
+keywords = ["fagan-nomogram", "bayesian", "diagnostics", "likelihood-ratios"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Healthcare Industry",
@@ -21,16 +19,19 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Mathematics",
 ]
 
 [project.optional-dependencies]
-web = ["fastapi>=0.110", "uvicorn[standard]>=0.27"]
-test = ["pytest>=8.0"]
-all = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "pydantic>=2.0", "pytest>=8.0"]
+web = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "pydantic>=2"]
+test = ["pytest>=8", "httpx>=0.27"]
+all = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "pydantic>=2", "pytest>=8", "httpx>=0.27"]
 
 [project.scripts]
 fagan-nomogram = "fagan_nomogram:main"
+
+[tool.setuptools]
+py-modules = ["fagan_nomogram", "cli", "simulator", "enrichment"]
 
 [tool.setuptools.packages.find]
 include = ["agents*"]

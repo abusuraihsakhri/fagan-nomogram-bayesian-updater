@@ -1,181 +1,72 @@
 # Fagan Nomogram Bayesian Updater
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Standards:** CAP / CLSI / ISO / NIST
+A diagnostic probability calculator implementing Bayes' theorem and the likelihood-ratio form of the Fagan nomogram. Provides a zero-dependency Python core, an offline browser interface, CSV batch processing, and an optional FastAPI service.
 
-<div align="center">
+## Use the calculator
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+Open `index.html` in a browser or visit the GitHub Pages deployment once enabled. The browser application runs without Pyodide, backend services, API keys, third-party scripts, or network requests. Enter a **pre-test probability in percent**, then either sensitivity/specificity (also in percent) or the likelihood ratio for the observed positive/negative test result. The interface displays the updated probability, likelihood ratio, odds, a graphical nomogram, and a downloadable CSV row.
 
-</div>
+## Python CLI
 
----
-
-## What It Does
-
-Fagan Nomogram & Bayesian Diagnostic Probability Updater calculates composite scores from clinical measurements and classifies them into risk tiers. Includes an enterprise multi-agent evaluation platform with HMAC-SHA256 audit trails and zero-PHI outbound protection.
-
-Author: Dr. Abu Suraih Sakhri · License: MIT
-
----
-
-## Installation
+Python 3.10 or newer is supported.
 
 ```bash
-# Core (zero-dependency)
-pip install -e .
-
-# With web API support
-pip install -e ".[web]"
-
-# With test dependencies
-pip install -e ".[test]"
-
-# Everything
-pip install -e ".[all]"
-```
-
----
-
-## Usage
-
-### 1. Single Evaluation (CLI)
-
-```bash
-python fagan_nomogram.py single --v1 14.5 --v2 4.2 --v3 1.8
-```
-
-### 2. Batch CSV Processing
-
-```bash
+python fagan_nomogram.py single --pretest 30 --sensitivity 90 --specificity 80 --result positive
+python fagan_nomogram.py single --pretest 30 --sensitivity 90 --specificity 80 --result negative
+python fagan_nomogram.py single --pretest 30 --lr 4.5
 python fagan_nomogram.py batch -i sample.csv -o results.csv
 ```
 
-### 3. Enterprise Supervisor (Multi-Agent Evaluation)
+Alternatively, `python -m pip install -e .` exposes the `fagan-nomogram` console command. The core uses the standard library only.
 
-```bash
-# Run a single audit task
-python cli.py audit --task-id TASK-001 --primary 28.5 --secondary 14.2
+Batch CSV inputs require `pretest_probability` and either `likelihood_ratio` or both `sensitivity` and `specificity`. Optional `result` values are `positive` or `negative` (default `positive`). Other columns are preserved. Invalid rows raise a line-specific error without overwriting an existing output file. Results include the likelihood ratio, pre/post-test odds, post-test probability, and probability change.
 
-# Batch process via supervisor
-python cli.py batch -i sample.csv -o dossier_results.csv
+## Method
 
-# Verify HMAC audit trail integrity
-python cli.py verify-audit
+Let `p` be the pre-test probability expressed as a proportion.
 
-# Query supervisory chat
-python cli.py chat "Explain current calibration status"
+```text
+LR+ = sensitivity / (1 - specificity)
+LR- = (1 - sensitivity) / specificity
+Pre-test odds = p / (1 - p)
+Post-test odds = pre-test odds × LR
+Post-test probability = post-test odds / (1 + post-test odds)
 ```
 
-### 4. REST API Server
+The software uses log-odds for numerical stability, validates finite input percentages, and handles 0%/100% boundaries and theoretically infinite LRs. Undefined combinations return an error. For a 30% prior and a test with 90% sensitivity and 80% specificity, LR+ = 4.5 and LR− = 0.125. Positive and negative results give approximately **65.85%** and **5.08%**, respectively.
+
+The LR method assumes test performance estimates are valid for the population and clinical setting. Sequential test updating is only justified when the relevant conditional dependence between tests is accounted for.
+
+## Optional API and demonstration supervisor
 
 ```bash
+python -m pip install -e ".[all]"
 python cli.py serve --host 127.0.0.1 --port 8000
 ```
 
-Or with Docker:
+Visit `http://127.0.0.1:8000/` for the calculator and `http://127.0.0.1:8000/docs` for interactive API documentation. POST `/api/calculate` accepts a JSON object with `pretest_probability`, plus either `likelihood_ratio` or `sensitivity` and `specificity`, and an optional `result`.
+
+The separate legacy demonstration system remains accessible through `python cli.py audit`, `batch`, `chat`, `verify-audit`, and the `/api/audit` endpoints. Its threshold rules and mock conversational responses are **not** a clinical validation system, medical alert service, or a substitute for the Bayesian calculator. The demo API is intended for trusted/local environments, not unauthenticated public hosting.
+
+For Docker Compose, set a non-default `AUDIT_SECRET_KEY` in your environment before running `docker compose up --build`. Compose binds the API to the local loopback interface by default. A runtime-generated key is used only when running without a configured key outside Compose; such keys do not persist across restarts.
+
+## Tests and development
 
 ```bash
-docker build -t fagan-nomogram-bayesian-updater .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secret fagan-nomogram-bayesian-updater
+python -m pip install -e ".[all]"
+python -m pytest -q
+python -m compileall -q fagan_nomogram.py cli.py agents tests
+python -m pip check
 ```
 
-### 5. High-Throughput Simulation
+CI tests Python 3.10, 3.11, and 3.12. The source is in `fagan_nomogram.py`; the browser version is in `index.html`; the API and legacy demonstration components are in `agents/` and `cli.py`.
 
-```bash
-python simulator.py 1000
-```
+## Privacy, compatibility, and limitations
 
----
+The static calculator does not upload or persist data. Python/CSV processing takes place on the machine where it runs; exported CSVs may contain user-supplied columns, so avoid real patient identifiers. The optional API is a local service and does not provide production authentication. Modern browsers with JavaScript and SVG support are sufficient; the browser runs ordinary JavaScript rather than Python/Pyodide.
 
-## Mathematical Formulation
+**Educational/research use only.** No diagnostic thresholds, medical recommendations, or regulatory conformance are claimed. Clinical interpretation requires appropriate pre-test assessment and validated test characteristics.
 
-The core `calculate_metrics()` function computes a weighted score:
+## License
 
-```
-score = v1 + v2/2 + v3/3 + ...
-```
-
-Classification tiers:
-- **Low / Standard** (score < 10): Standard monitoring
-- **Moderate / Intermediate** (10 ≤ score < 25): Close observation
-- **High / Severe** (score ≥ 25): Urgent clinical intervention
-
----
-
-## Security Architecture
-
-* **Zero-PHI Outbound Interceptor:** AST and regex inspection blocking SSNs, MRNs, phone numbers, emails, DOBs, and patient names.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation. Integrity verification recomputes every signature.
-* **Secure Secret Management:** No hardcoded secrets in production. `AUDIT_SECRET_KEY` must be provided via environment variable.
-* **Path Traversal Protection:** All file I/O resolves and validates paths against directory traversal.
-
-**Important:** Set `AUDIT_SECRET_KEY` in production. Without it, an ephemeral runtime key is generated (and a warning emitted), which means audit trails won't persist across restarts.
-
----
-
-## Testing
-
-```bash
-# Run full test suite
-pytest -v
-
-# Run with coverage (if pytest-cov installed)
-pytest -v --cov=.
-```
-
-The test suite covers:
-- Core scoring and classification logic
-- Batch CSV processing (including edge cases)
-- PHI guard enforcement (MRN, SSN, phone, email patterns)
-- Worker agent evaluation
-- Supervisor consensus and audit trail
-- HMAC integrity verification
-- CLI commands (audit, chat, verify-audit)
-- Enrichment module suite
-
----
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Service health check |
-| GET | `/metrics` | Operational metrics (dossier count, audit blocks) |
-| POST | `/api/audit` | Dispatch task across evaluation workers |
-| POST | `/api/chat` | Supervisory conversational assistant |
-| GET | `/api/audit/logs` | Retrieve and verify HMAC audit trail |
-
----
-
-## Project Structure
-
-```
-fagan-nomogram-bayesian-updater/
-├── fagan_nomogram.py     # Core scoring algorithm (zero-dependency)
-├── cli.py                # Enterprise CLI (supervisor, batch, serve)
-├── simulator.py          # High-throughput simulation
-├── enrichment.py         # Enrichment engine suite
-├── agents/
-│   ├── __init__.py       # Package metadata
-│   ├── api.py            # FastAPI REST server
-│   ├── base.py           # Security guards, audit trail, PHI protection
-│   ├── models.py         # Pydantic data models
-│   ├── supervisor.py     # Multi-agent orchestrator
-│   ├── workers.py        # Specialized evaluation workers
-│   ├── llm_factory.py    # LLM provider abstraction
-│   ├── learning.py       # Bayesian calibration engine
-│   ├── metrics.py        # Prometheus metrics collector
-│   └── streamer.py       # WebSocket telemetry broadcaster
-├── tests/                # Pytest test suite
-├── web/index.html        # Operations console (static)
-├── pyproject.toml        # Package configuration
-├── Dockerfile            # Container build
-├── docker-compose.yml    # Production deployment
-└── openapi_spec.json     # OpenAPI 3.1 specification
-```
+MIT — see [LICENSE](LICENSE).

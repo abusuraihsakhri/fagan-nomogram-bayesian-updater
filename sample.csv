@@ -1,4 +1,4 @@
-Patient_ID,v1,v2,v3
-PT-101,14.5,4.2,1.8
-PT-102,8.0,2.1,0.5
-PT-103,28.4,12.0,5.5
+study,pretest_probability,sensitivity,specificity,result
+Example-A,30,90,80,positive
+Example-B,30,90,80,negative
+Example-C,5,95,90,positive

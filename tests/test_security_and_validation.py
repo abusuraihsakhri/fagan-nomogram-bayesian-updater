@@ -48,7 +48,7 @@ class TestProcessBatchValidation:
 
     def test_creates_output_directory(self, tmp_path):
         csv_in = tmp_path / "in.csv"
-        csv_in.write_text("v1,v2\n10.0,5.0\n")
+        csv_in.write_text("pretest_probability,likelihood_ratio\n10.0,5.0\n")
         csv_out = tmp_path / "subdir" / "nested" / "out.csv"
         process_batch(str(csv_in), str(csv_out))
         assert csv_out.exists()
