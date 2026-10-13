@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Local Fagan nomogram calculator for updating disease probability using diagnostic likelihood ratios.">
+  <meta name="theme-color" content="#101827">
+  <title>Fagan Nomogram | Bayesian Diagnostic Updater</title>
+  <style>
+    :root{color-scheme:light;--bg:#f4f7fb;--panel:#fff;--ink:#162235;--muted:#526277;--line:#d8e1ec;--brand:#2059ba;--focus:#1764d7;--positive:#106b66;--negative:#bc6419}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    main{max-width:1120px;margin:auto;padding:28px 20px 48px}h1{font-size:clamp(1.6rem,3vw,2.2rem);letter-spacing:-.035em;margin:5px 0}h2{font-size:1.12rem;margin:0 0 16px}h3{font-size:.95rem;margin:0 0 6px}
+    header{margin-bottom:24px}header p{margin:4px 0;color:var(--muted)}.eyebrow{font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;color:var(--brand);font-weight:800}
+    .layout{display:grid;grid-template-columns:minmax(280px,.82fr) minmax(0,1.35fr);gap:18px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 6px 16px rgba(17,39,74,.04)}
+    .field{margin-bottom:18px}label{display:block;font-weight:650;font-size:.91rem;margin-bottom:6px}label small{font-weight:400;color:var(--muted)}
+    input,select,button{font:inherit}input[type=number],select{width:100%;padding:10px 12px;border:1px solid #aabacd;border-radius:8px;background:white;color:var(--ink);min-height:44px}
+    input[type=range]{width:100%;accent-color:var(--brand);margin:10px 0 0}input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+    .hint{color:var(--muted);font-size:.8rem;margin:5px 0 0}.hidden{display:none!important}.error{padding:10px 12px;border:1px solid #de8b8b;background:#fff1f1;color:#8c2222;border-radius:8px;margin:8px 0 16px;font-weight:600}
+    .result{background:#eef5ff;border:1px solid #c9dcfa;border-radius:12px;padding:18px;margin-bottom:16px}
+    .result-label{color:#435976;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}.result-val{font-size:clamp(2.4rem,5vw,3.7rem);letter-spacing:-.05em;line-height:1.1;font-weight:750;color:#134a99;margin:4px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}.stat{border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}.stat dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.035em;color:var(--muted);font-weight:700}.stat dd{margin:3px 0 0;font-size:1.15rem;font-weight:700;overflow-wrap:anywhere}
+    .chart{border:1px solid var(--line);border-radius:12px;padding:8px;background:#fbfdff}svg{width:100%;height:auto;display:block;min-height:230px;max-height:380px}.chart-note{font-size:.76rem;color:var(--muted);margin:7px 5px 3px}
+    button{cursor:pointer;border:1px solid var(--brand);color:var(--brand);background:#fff;border-radius:8px;padding:9px 14px;font-weight:650;min-height:44px}button:hover{background:#e9f2ff}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .footnote{margin-top:18px;font-size:.85rem;color:var(--muted)}.footnote p{margin:.5em 0}.formula{font: .9rem/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;color:#2c4265;overflow-wrap:anywhere}
+    @media(max-width:800px){.layout{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:18px 12px 36px}.panel{padding:18px}}
+    @media(max-width:390px){.grid{grid-template-columns:1fr 1fr}.stat{padding:8px}.stat dd{font-size:.99rem}}
+    @media(prefers-reduced-motion:no-preference){button{transition:background .12s ease}}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Clinical epidemiology · educational reference</div>
+    <h1>Fagan Nomogram</h1>
+    <p>Update a pre-test probability using the likelihood ratio of a diagnostic result.</p>
+  </header>
+  <div class="layout">
+    <section class="panel" aria-labelledby="inputs-title">
+      <h2 id="inputs-title">Test inputs</h2>
+      <div class="field">
+        <label for="pretest">Pre-test probability <small>(%)</small></label>
+        <input id="pretest" type="number" min="0" max="100" step="any" value="30" inputmode="decimal">
+        <input id="pretest-slider" type="range" min="0" max="100" step="0.1" value="30" aria-label="Pre-test probability slider">
+      </div>
+      <div class="field">
+        <label for="mode">Specify test performance using</label>
+        <select id="mode"><option value="accuracy">Sensitivity and specificity</option><option value="lr">Likelihood ratio directly</option></select>
+      </div>
+      <div id="accuracy-fields">
+        <div class="field"><label for="sensitivity">Sensitivity <small>(%)</small></label><input id="sensitivity" type="number" min="0" max="100" step="any" value="90" inputmode="decimal"></div>
+        <div class="field"><label for="specificity">Specificity <small>(%)</small></label><input id="specificity" type="number" min="0" max="100" step="any" value="80" inputmode="decimal"></div>
+      </div>
+      <div id="lr-fields" class="hidden">
+        <div class="field"><label for="lr">Result-specific likelihood ratio</label><input id="lr" type="number" min="0" step="any" value="4.5" inputmode="decimal"><p class="hint">Enter LR+ for a positive result or LR− for a negative result.</p></div>
+      </div>
+      <div class="field"><label for="outcome">Observed test result</label><select id="outcome"><option value="positive">Positive</option><option value="negative">Negative</option></select></div>
+      <div id="error" role="alert" class="error hidden"></div>
+      <p class="hint">Percentages use a 0–100 scale, not decimal proportions. No patient information is required.</p>
+    </section>
+    <section class="panel" aria-labelledby="results-title">
+      <h2 id="results-title">Bayesian update</h2>
+      <div class="result" aria-live="polite" aria-atomic="true">
+        <div class="result-label">Post-test probability</div><div id="posttest" class="result-val">65.9%</div>
+        <div id="change" class="hint">+35.9 percentage points after a positive result</div>
+      </div>
+      <dl class="grid"><div class="stat"><dt>Pre-test</dt><dd id="pre-label">30.0%</dd></div><div class="stat"><dt>Likelihood ratio</dt><dd id="lr-label">4.5</dd></div><div class="stat"><dt>Post-test odds</dt><dd id="odds-label">1.929</dd></div></dl>
+      <h3>Fagan nomogram</h3>
+      <div class="chart">
+        <svg id="nomogram" viewBox="0 0 650 370" role="img" aria-label="Fagan nomogram showing pre-test probability, likelihood ratio and post-test probability">
+          <g id="axes"></g><g id="plot"></g>
+        </svg>
+        <p class="chart-note">Logarithmic odds scales. At 0% or 100%, markers are clipped to the visual axis limits; numerical results remain exact.</p>
+      </div>
+      <div class="actions"><button id="export" type="button">Export result (CSV)</button><button id="reset" type="button">Reset example</button></div>
+    </section>
+  </div>
+  <section class="footnote" aria-label="Method and limitations">
+    <p class="formula">Pre-test odds = p / (1 − p) · Post-test odds = pre-test odds × LR · Post-test probability = odds / (1 + odds)</p>
+    <p>LR+ = sensitivity / (1 − specificity); LR− = (1 − sensitivity) / specificity. These formulas assume estimates are applicable to the population and context being evaluated. Sequential test updates require accounting for dependence between tests.</p>
+    <p><strong>Use limitation:</strong> Educational/research calculator, not validated as a clinical decision system. It does not set treatment thresholds or provide medical recommendations. All calculations run in your browser; there are no network requests or stored patient data.</p>
+  </section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const el = id => document.getElementById(id);
+  const controls = ['pretest','pretest-slider','mode','sensitivity','specificity','lr','outcome'];
+  const ns = 'http://www.w3.org/2000/svg';
+  let last = null;
+  function svg(tag, attrs, label, parent) {
+    const element = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, String(value)));
+    if (label !== undefined) element.textContent = label;
+    parent.appendChild(element);return element;
+  }
+  function percent(id) {
+    const value = el(id).value.trim(); const number = Number(value);
+    if (!value || !Number.isFinite(number) || number < 0 || number > 100) throw Error(id + ' must be between 0 and 100%.');
+    return number;
+  }
+  function calculate() {
+    const prior = percent('pretest');
+    const outcome = el('outcome').value;
+    let lr;
+    if (el('mode').value === 'lr') {
+      const value = el('lr').value.trim(); lr = Number(value);
+      if (!value || !Number.isFinite(lr) || lr < 0) throw Error('Likelihood ratio must be a finite, non-negative number.');
+    } else {
+      const sensitivity = percent('sensitivity') / 100;
+      const specificity = percent('specificity') / 100;
+      const numerator = outcome === 'positive' ? sensitivity : 1 - sensitivity;
+      const denominator = outcome === 'positive' ? 1 - specificity : specificity;
+      if (numerator === 0 && denominator === 0) throw Error('Likelihood ratio is undefined for this test result.');
+      lr = denominator === 0 ? Infinity : numerator / denominator;
+    }
+    const p = prior / 100;
+    if ((p === 0 && lr === Infinity) || (p === 1 && lr === 0)) throw Error('Posterior probability is undefined for these inputs.');
+    let posterior;
+    if (p === 0 || lr === 0) posterior = 0;
+    else if (p === 1 || lr === Infinity) posterior = 1;
+    else {
+      const logOdds = Math.log(p) - Math.log1p(-p) + Math.log(lr);
+      posterior = logOdds >= 0 ? 1/(1+Math.exp(-logOdds)) : Math.exp(logOdds)/(1+Math.exp(logOdds));
+    }
+    return {prior, outcome, lr, posterior:posterior*100, odds:posterior===1?Infinity:posterior/(1-posterior)};
+  }
+  const fmt = (x, digits=1) => x === Infinity ? '∞' : Number(x).toLocaleString('en-US',{maximumFractionDigits:digits,minimumFractionDigits:digits});
+  const clamp = p => Math.max(.5,Math.min(99.5,p));
+  const logit = p => {const x=clamp(p)/100;return Math.log(x/(1-x));};
+  function plot(data) {
+    const axes=el('axes'), plot=el('plot');axes.replaceChildren();plot.replaceChildren();
+    const left=115, mid=325, right=535, center=197, slope=30;
+    const ypre=p=>center+slope*logit(p), ypost=p=>center-slope*logit(p);
+    const ylr=lr=>center-slope*Math.log(lr)/2;
+    [['Pre-test',left],['LR',mid],['Post-test',right]].forEach(([label,x])=>{
+      svg('line',{x1:x,x2:x,y1:35,y2:333,stroke:'#8496ac','stroke-width':1.4},undefined,axes);
+      svg('text',{x,y:22,'text-anchor':'middle',fill:'#364b68','font-size':15,'font-weight':650},label,axes);
+    });
+    [1,5,10,20,30,50,70,80,90,95,99].forEach(p=>{
+      for(const [x,y,anchor,offset] of [[left,ypre(p),'end',-10],[right,ypost(p),'start',10]]){
+        if(y<34||y>335) continue;
+        svg('line',{x1:x-5,x2:x+5,y1:y,y2:y,stroke:'#a7b4c3'},undefined,axes);
+        svg('text',{x:x+offset,y:y+4,'text-anchor':anchor,fill:'#65768d','font-size':11},p+'%',axes);
+      }
+    });
+    [.01,.1,.5,1,2,5,10,100,1000].forEach(lr=>{
+      const y=ylr(lr);if(y<37||y>331)return;
+      svg('line',{x1:mid-5,x2:mid+5,y1:y,y2:y,stroke:'#a7b4c3'},undefined,axes);
+      svg('text',{x:mid+13,y:y+4,fill:'#65768d','font-size':11},String(lr),axes);
+    });
+    const y1=ypre(data.prior),y3=ypost(data.posterior);
+    const color=data.outcome==='positive'?'#106b66':'#bc6419';
+    svg('line',{x1:left,y1,x2:right,y2:y3,stroke:color,'stroke-width':3,'stroke-linecap':'round'},undefined,plot);
+    [[left,y1],[right,y3]].forEach(([x,y])=>svg('circle',{cx:x,cy:y,r:6,fill:color,stroke:'#fff','stroke-width':2},undefined,plot));
+    if(Number.isFinite(data.lr) && data.lr>0){let y=ylr(data.lr);if(y>=35&&y<=333)svg('circle',{cx:mid,cy:y,r:4,fill:color,stroke:'#fff','stroke-width':1.5},undefined,plot);}
+  }
+  function refresh(){
+    el('accuracy-fields').classList.toggle('hidden',el('mode').value!=='accuracy');
+    el('lr-fields').classList.toggle('hidden',el('mode').value!=='lr');
+    try{
+      const data=calculate();last=data;el('error').classList.add('hidden');
+      el('posttest').textContent=fmt(data.posterior)+'%';
+      const delta=data.posterior-data.prior;
+      el('change').textContent=(delta>0?'+':'')+fmt(delta)+' percentage points after a '+data.outcome+' result';
+      el('pre-label').textContent=fmt(data.prior)+'%';el('lr-label').textContent=fmt(data.lr,4);
+      el('odds-label').textContent=fmt(data.odds,4);el('export').disabled=false;plot(data);
+    }catch(error){last=null;el('error').textContent=error.message;el('error').classList.remove('hidden');el('posttest').textContent='—';el('change').textContent='Correct the inputs to calculate.';el('export').disabled=true;el('plot').replaceChildren();}
+  }
+  controls.forEach(id=>el(id).addEventListener('input',()=>{if(id==='pretest'){const p=Number(el('pretest').value);if(Number.isFinite(p)&&p>=0&&p<=100)el('pretest-slider').value=p;}if(id==='pretest-slider')el('pretest').value=el('pretest-slider').value;refresh();}));
+  el('reset').addEventListener('click',()=>{Object.entries({pretest:30,'pretest-slider':30,mode:'accuracy',sensitivity:90,specificity:80,lr:4.5,outcome:'positive'}).forEach(([key,value])=>el(key).value=value);refresh();});
+  el('export').addEventListener('click',()=>{if(!last)return;
+    const headers=['pretest_probability','result','likelihood_ratio','posttest_probability'];
+    const values=[last.prior,last.outcome,last.lr===Infinity?'infinity':last.lr,last.posterior];
+    const blob=new Blob([headers.join(',')+'\n'+values.join(',')+'\n'],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='fagan-result.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+  refresh();
+})();
+</script>
+</body>
+</html>
