@@ -1,10 +1,12 @@
 # Fagan Nomogram Bayesian Updater
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/fagan-nomogram-bayesian-updater/)
+
 A diagnostic probability calculator implementing Bayes' theorem and the likelihood-ratio form of the Fagan nomogram. Provides a zero-dependency Python core, an offline browser interface, CSV batch processing, and an optional FastAPI service.
 
 ## Use the calculator
 
-Open `index.html` in a browser or visit the GitHub Pages deployment once enabled. The browser application runs without Pyodide, backend services, API keys, third-party scripts, or network requests. Enter a **pre-test probability in percent**, then either sensitivity/specificity (also in percent) or the likelihood ratio for the observed positive/negative test result. The interface displays the updated probability, likelihood ratio, odds, a graphical nomogram, and a downloadable CSV row.
+[Open the live calculator](https://abusuraihsakhri.github.io/fagan-nomogram-bayesian-updater/) or open `index.html` locally. The browser application runs without Pyodide, backend services, API keys, third-party scripts, or network requests. Enter a **pre-test probability in percent**, then either sensitivity/specificity (also in percent) or the likelihood ratio for the observed positive/negative test result. The interface displays the updated probability, likelihood ratio, odds, a graphical nomogram, and a downloadable CSV row.
 
 ## Python CLI
 
