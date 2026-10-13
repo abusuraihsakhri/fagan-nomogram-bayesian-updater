@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Fagan Nomogram Bayesian Updater API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
+    "description": "Bayesian post-test probability API with separate unvalidated demonstration supervisor endpoints.",
+    "version": "3.1.0",
     "contact": {
       "name": "Dr. Abu Suraih Sakhri",
       "url": "https://github.com/abusuraihsakhri"
@@ -15,7 +15,7 @@
         "summary": "Health and metadata check",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "Service reachable"
           }
         }
       }
@@ -25,7 +25,7 @@
         "summary": "Prometheus operational metrics",
         "responses": {
           "200": {
-            "description": "Prometheus text metrics"
+            "description": "JSON demonstration supervisor metrics"
           }
         }
       }
@@ -107,6 +107,62 @@
         "responses": {
           "200": {
             "description": "Cryptographic audit trail"
+          }
+        }
+      }
+    },
+    "/api/calculate": {
+      "post": {
+        "summary": "Calculate Bayesian post-test probability",
+        "description": "All probabilities, sensitivity and specificity are 0–100 percentages. Provide either likelihood_ratio or both sensitivity and specificity.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pretest_probability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "likelihood_ratio": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "sensitivity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "specificity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": [
+                      "positive",
+                      "negative"
+                    ],
+                    "default": "positive"
+                  }
+                },
+                "required": [
+                  "pretest_probability"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post-test probability, likelihood ratio and odds"
+          },
+          "422": {
+            "description": "Invalid or undefined Bayesian input"
           }
         }
       }
